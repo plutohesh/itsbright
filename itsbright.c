@@ -2,47 +2,39 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define MAX_PATH 256
+#define MAX_PATH_LEN 256
 
-int main() {
-    char path[MAX_PATH];
-    int brightness, max_brightness, new_brightness;
-    FILE *fp;
-
-    // Loop through all directories in /sys/class/backlight/
-    for (int i = 0; i < 10; i++) {
-        sprintf(path, "/sys/class/backlight/%d/brightness", i);
-
-        // Read brightness and max_brightness values from each directory
-        fp = fopen(path, "r");
-        if (fp == NULL) {
-            printf("Error opening file %s\n", path);
-            exit(1);
-        }
-        fscanf(fp, "%d", &brightness);
-        fclose(fp);
-
-        sprintf(path, "/sys/class/backlight/%d/max_brightness", i);
-        fp = fopen(path, "r");
-        if (fp == NULL) {
-            printf("Error opening file %s\n", path);
-            exit(1);
-        }
-        fscanf(fp, "%d", &max_brightness);
-        fclose(fp);
-
-        // Calculate new brightness value
-        new_brightness = brightness + (max_brightness * 5 / 100);
-
-        // Write new brightness value back to the corresponding directory
-        fp = fopen(path, "w");
-        if (fp == NULL) {
-            printf("Error opening file %s\n", path);
-            exit(1);
-        }
-        fprintf(fp, "%d", new_brightness);
-        fclose(fp);
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        printf("Usage: %s [up|down]\n", argv[0]);
+        return 1;
     }
+
+    char path[MAX_PATH_LEN];
+    snprintf(path, MAX_PATH_LEN, "/sys/class/backlight/*/brightness");
+
+    FILE *fp = fopen(path, "r+");
+    if (fp == NULL) {
+        printf("Failed to open brightness file\n");
+        return 1;
+    }
+
+    int current_brightness;
+    fscanf(fp, "%d", &current_brightness);
+
+    int new_brightness;
+    if (strcmp(argv[1], "up") == 0) {
+        new_brightness = current_brightness * 1.05;
+    } else if (strcmp(argv[1], "down") == 0) {
+        new_brightness = current_brightness * 0.95;
+    } else {
+        printf("Invalid argument: %s\n", argv[1]);
+        return 1;
+    }
+
+    fseek(fp, 0, SEEK_SET);
+    fprintf(fp, "%d", new_brightness);
+    fclose(fp);
 
     return 0;
 }
